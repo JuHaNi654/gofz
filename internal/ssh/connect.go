@@ -58,25 +58,37 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 		switch event.Event {
 		case List:
 			debug.Write("List", "Incoming event type")
-			files, _ := listFiles(*sc)
-			client.Recv <- files
+			files, _ := listFiles(*sc, event.Payload)
+			client.Recv <- RecvEvent{
+				Event:   List,
+				Payload: files,
+			}
+		case Wd:
+			debug.Write("Wd", "Incoming event type")
+			path, _ := getWd(*sc)
+			client.Recv <- RecvEvent{
+				Event:   Wd,
+				Payload: path,
+			}
 		case Get:
 			debug.Write("Get", "Incoming event type")
 		case Put:
 			debug.Write("Put", "Incoming event type")
 		case Quit:
 			debug.Write("Quit", "Incoming event type")
-			client.Recv <- true
+			client.Recv <- RecvEvent{
+				Event:   Quit,
+				Payload: true,
+			}
 			return
 		}
 	}
 }
 
-func listFiles(sc sftp.Client) ([]os.FileInfo, error) {
-	files, err := sc.ReadDir(".")
-	if err != nil {
-		return nil, err
-	}
+func getWd(sc sftp.Client) (string, error) {
+	return sc.Getwd()
+}
 
-	return files, nil
+func listFiles(sc sftp.Client, path string) ([]os.FileInfo, error) {
+	return sc.ReadDir(path)
 }

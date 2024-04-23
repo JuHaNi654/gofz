@@ -11,7 +11,7 @@ type input struct {
 	width     int
 	height    int
 	hidden    bool
-	active    bool
+	focus     bool
 	textInput textinput.Model
 }
 
@@ -27,14 +27,15 @@ func newInput(hidden bool, placeholder string) *input {
 	}
 }
 
-func (m *input) SetActive(active bool) {
-	if active {
-		m.textInput.Focus()
-	} else {
-		m.textInput.Blur()
-	}
+func (m *input) Focus() {
+	m.textInput.Focus()
+	m.focus = true
+}
 
-	m.active = active
+func (m *input) Blur() {
+	m.textInput.Blur()
+	m.textInput.Reset()
+	m.focus = false
 }
 
 func (m *input) Update(msg tea.Msg) tea.Cmd {
@@ -66,7 +67,7 @@ func (m *input) View() string {
 		m.textInput.View(),
 	)
 
-	if m.active {
+	if m.focus {
 		return centerContentFocus.
 			Width(m.width - 2).
 			Height(m.height - 2).

@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"gofz/internal/debug"
+	"gofz/internal/ssh"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,10 +30,17 @@ func newTransferModel() *transferModel {
 	}
 }
 
+func (m *transferModel) ClearPassphrase() {
+	m.passphrase = ""
+}
+
 func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case ssh.RecvEvent:
+		debug.Write(msg, "Incoming recv event")
+		return m.remote.Update(msg)
 	case Connected:
 		if msg {
 			m.inputActive = false
@@ -41,9 +51,9 @@ func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		if m.inputActive {
-			cmds = append(cmds, m.input.Update(msg))
-		}
+		m.input.Update(msg)
+		m.local.Update(msg)
+		m.remote.Update(msg)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
@@ -60,16 +70,20 @@ func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
 				}
 			}
 		case key.Matches(msg, keys.Next), key.Matches(msg, keys.Prev):
+			m.ClearPassphrase()
 			if m.focus == focusLeft {
 				m.focus = focusRight
-				m.local.SetActive(false)
-				m.remote.SetActive(true)
-				m.input.SetActive(true)
+
+				m.local.Blur()
+				m.remote.Focus()
+				m.input.Focus()
+
 			} else {
 				m.focus = focusLeft
-				m.input.SetActive(false)
-				m.local.SetActive(true)
-				m.remote.SetActive(false)
+
+				m.local.Focus()
+				m.remote.Blur()
+				m.input.Blur()
 			}
 
 			return nil
@@ -86,10 +100,11 @@ func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
 		}
 	}
 
-	if m.inputActive && m.focus == focusRight {
+	if focusLeft == m.focus {
+		cmds = append(cmds, m.local.Update(msg))
+	} else if focusRight == m.focus && m.inputActive {
 		cmds = append(cmds, m.input.Update(msg))
 	} else {
-		cmds = append(cmds, m.local.Update(msg))
 		cmds = append(cmds, m.remote.Update(msg))
 	}
 

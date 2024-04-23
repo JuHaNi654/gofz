@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"gofz/internal/ssh"
+	"gofz/internal/system"
 	"os"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -11,44 +13,74 @@ import (
 type remoteModel struct {
 	width  int
 	height int
-	active bool
+	focus  bool
 	list   list.Model
+	wd     *system.DirectoryCache
 }
 
 func newRemoteModel() *remoteModel {
 	return &remoteModel{
-		active: false,
-		list:   newList(nil, ""),
+		list: newList(nil, ""),
 	}
 }
 
-func (m *remoteModel) SetActive(active bool) {
-	m.active = active
+func (m *remoteModel) Focus() {
+	m.focus = true
+}
+
+func (m *remoteModel) Blur() {
+	m.focus = false
 }
 
 func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case []os.FileInfo:
-		items := loadItems(msg)
-		return m.list.SetItems(items)
+	case ssh.RecvEvent:
+		switch msg.Event {
+		case ssh.List:
+			items, _ := msg.Payload.([]os.FileInfo)
+			return m.list.SetItems(loadItems(items))
+		case ssh.Wd:
+			path, _ := msg.Payload.(string)
+			m.wd = system.InitDirectoryCache(path)
+			m.list.Title = path
+			return nil
+		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width / 2
 		m.height = msg.Height
 	case tea.KeyMsg:
-		if !m.active {
-			return nil
-		}
-
 		switch {
 		case key.Matches(msg, keys.Enter):
+			if 0 == m.list.Index() {
+				m.wd.PreviousWd()
+				m.list.Title = m.wd.GetWd()
+				return func() tea.Msg {
+					return SendEvent{
+						Event:   ssh.List,
+						Payload: m.wd.GetWd(),
+					}
+				}
+			}
+
+			selected := m.list.SelectedItem()
+			i, _ := selected.(item)
+
+			if i.Entry.IsDir() {
+				m.wd.NextWd(i.Entry.Name())
+				m.list.Title = m.wd.GetWd()
+				m.list.Select(0)
+				return func() tea.Msg {
+					return SendEvent{
+						Event:   ssh.List,
+						Payload: m.wd.GetWd(),
+					}
+				}
+			}
+
 			return nil
 		}
-	}
-
-	if !m.active {
-		return nil
 	}
 
 	m.list, cmd = m.list.Update(msg)
@@ -56,19 +88,15 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *remoteModel) View() string {
-	var s string
-
-	s = m.list.View()
-
-	if m.active {
+	if m.focus {
 		return focusBorderStyle.
 			Width(m.width - 2).
 			Height(m.height - 2).
-			Render(s)
+			Render(m.list.View())
 	}
 
 	return borderStyle.
 		Width(m.width - 2).
 		Height(m.height - 2).
-		Render(s)
+		Render(m.list.View())
 }

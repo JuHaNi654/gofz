@@ -1,6 +1,10 @@
 package ui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"gofz/internal/ssh"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 const (
 	focusLeft  = 0
@@ -20,4 +24,9 @@ const (
 type ViewModel interface {
 	Update(msg tea.Msg) tea.Cmd
 	View() string
+}
+
+type SendEvent struct {
+	Event   ssh.EventType
+	Payload any
 }

@@ -42,6 +42,7 @@ func (m *model) connect() tea.Cmd {
 	}
 
 	m.connected = Connected(connected)
+	m.client.Getwd()
 	m.client.List(".")
 	return func() tea.Msg {
 		return m.connected
@@ -62,6 +63,12 @@ func NewModel(client *ssh.SftpClient) model {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case SendEvent:
+		switch msg.Event {
+		case ssh.List:
+			path, _ := msg.Payload.(string)
+			m.client.List(path)
+		}
 	case error:
 		debug.Write(msg, "Error")
 		m.err = msg

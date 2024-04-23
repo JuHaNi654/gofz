@@ -14,7 +14,7 @@ type localModel struct {
 	width  int
 	height int
 	list   list.Model
-	active bool
+	focus  bool
 
 	wd *system.DirectoryCache
 }
@@ -25,32 +25,31 @@ func newLocalModel() *localModel {
 	wd := system.InitDirectoryCache(path)
 
 	return &localModel{
-		list:   newList(wd.Entries(), wd.GetWd()),
-		wd:     wd,
-		active: true,
+		focus: true,
+		list:  newList(wd.Entries(), wd.GetWd()),
+		wd:    wd,
 	}
 }
 
-func (m *localModel) SetActive(active bool) {
-	m.active = active
+func (m *localModel) Focus() {
+	m.focus = true
+}
+
+func (m *localModel) Blur() {
+	m.focus = false
 }
 
 func (m *localModel) Update(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width / 2
 		m.height = msg.Height
 	case tea.KeyMsg:
-		if !m.active {
-			return nil
-		}
-
 		switch {
 		case key.Matches(msg, keys.Enter):
 			if 0 == m.list.Index() {
 				m.wd.PreviousWd()
+				m.list.Title = m.wd.GetWd()
 				items := loadItems(m.wd.Entries())
 				return m.list.SetItems(items)
 			}
@@ -61,6 +60,7 @@ func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 			if i.Entry.IsDir() {
 				m.wd.NextWd(i.Entry.Name())
 				items := loadItems(m.wd.Entries())
+				m.list.Title = m.wd.GetWd()
 				m.list.Select(0)
 				return m.list.SetItems(items)
 			}
@@ -69,22 +69,18 @@ func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 		}
 	}
 
-	// Maybe move up before switch
-	if !m.active {
-		return nil
-	}
-
-	m.list, cmd = m.list.Update(msg)
-	return cmd
+	m.list, _ = m.list.Update(msg)
+	return nil
 }
 
 func (m *localModel) View() string {
-	if m.active {
+	if m.focus {
 		return focusBorderStyle.
 			Width(m.width - 2).
 			Height(m.height - 2).
 			Render(m.list.View())
 	}
+
 	return borderStyle.
 		Width(m.width - 2).
 		Height(m.height - 2).

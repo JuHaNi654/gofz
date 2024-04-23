@@ -10,25 +10,32 @@ type EventType int
 
 const (
 	List EventType = iota
+	Wd
 	Get
 	Put
 	Quit
 )
 
 type Event struct {
-	Event EventType
+	Event   EventType
+	Payload string
+}
+
+type RecvEvent struct {
+	Event   EventType
+	Payload any
 }
 
 type SftpClient struct {
 	passphrase []byte
 	eventChan  chan Event
-	Recv       chan any
+	Recv       chan RecvEvent
 }
 
 func NewSftpClient() *SftpClient {
 	return &SftpClient{
 		eventChan: make(chan Event),
-		Recv:      make(chan any),
+		Recv:      make(chan RecvEvent),
 	}
 }
 
@@ -40,10 +47,17 @@ func (c *SftpClient) Passphrase() []byte {
 	return c.passphrase
 }
 
+func (c *SftpClient) Getwd() {
+	c.eventChan <- Event{
+		Event: Wd,
+	}
+}
+
 // List entries
 func (c *SftpClient) List(path string) {
 	c.eventChan <- Event{
-		Event: List,
+		Event:   List,
+		Payload: path,
 	}
 }
 
