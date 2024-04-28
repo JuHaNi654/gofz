@@ -19,6 +19,13 @@ var customBorder = lipgloss.Border{
 var (
 	headerStyle = lipgloss.
 			NewStyle().
+			PaddingLeft(1).
+			PaddingRight(1).
+			Border(customBorder)
+	footerStyle = lipgloss.
+			NewStyle().
+			PaddingLeft(1).
+			PaddingRight(1).
 			Border(customBorder)
 	borderStyle = lipgloss.NewStyle().
 			Border(customBorder)
@@ -33,9 +40,6 @@ var (
 				AlignVertical(lipgloss.Center)
 	centerContent = lipgloss.NewStyle().
 			Border(customBorder).
-			AlignHorizontal(lipgloss.Center).
-			AlignVertical(lipgloss.Center)
-	centerText = lipgloss.NewStyle().
 			AlignHorizontal(lipgloss.Center).
 			AlignVertical(lipgloss.Center)
 )

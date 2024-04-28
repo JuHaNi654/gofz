@@ -4,6 +4,7 @@ import (
 	"gofz/internal/debug"
 	"gofz/internal/ssh"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,11 +28,10 @@ type model struct {
 	viewModel ViewModel
 	config    *ssh.Config
 	msg       string
-
 	connected Connected
 	client    *ssh.SftpClient
-
-	err error
+	help      help.Model
+	err       error
 }
 
 func (m *model) connect() tea.Cmd {
@@ -60,6 +60,7 @@ func NewModel(client *ssh.SftpClient) model {
 		view:      Menu,
 		viewModel: loadView(Menu),
 		client:    client,
+		help:      help.New(),
 	}
 }
 
@@ -69,9 +70,14 @@ func (m model) UpdateViewPort() {
 		Render(m.msg)
 	headerHeight := lipgloss.Height(header)
 
+	footer := footerStyle.
+		Width(m.width - 2).
+		Render(m.help.View(keys))
+	footerHeight := lipgloss.Height((footer))
+
 	m.viewModel.Update(tea.WindowSizeMsg{
 		Width:  m.width,
-		Height: m.height - headerHeight,
+		Height: m.height - (headerHeight + footerHeight),
 	})
 }
 
@@ -100,6 +106,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ActiveView:
 		m.view = msg
 		m.viewModel = loadView(msg)
+		m.msg = ""
 		m.UpdateViewPort()
 		return m, nil
 	case tea.KeyMsg:
@@ -111,10 +118,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
+		case key.Matches(msg, keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
+			m.UpdateViewPort()
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.help.Width = msg.Width
 		m.UpdateViewPort()
 		return m, nil
 	}
@@ -124,14 +135,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *model) Header() string {
+func (m *model) header() string {
 	return headerStyle.Width(m.width - 2).Render(m.msg)
+}
+
+func (m *model) footer() string {
+	return footerStyle.Width(m.width - 2).Render(m.help.View(keys))
 }
 
 func (m model) View() string {
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
-		m.Header(),
+		m.header(),
 		m.viewModel.View(),
+		m.footer(),
 	)
 }
