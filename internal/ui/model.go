@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func loadView(view ActiveView) ViewModel {
@@ -25,6 +26,7 @@ type model struct {
 	view      ActiveView
 	viewModel ViewModel
 	config    *ssh.Config
+	msg       string
 
 	connected Connected
 	client    *ssh.SftpClient
@@ -61,6 +63,18 @@ func NewModel(client *ssh.SftpClient) model {
 	}
 }
 
+func (m model) UpdateViewPort() {
+	header := headerStyle.
+		Width(m.width - 2).
+		Render(m.msg)
+	headerHeight := lipgloss.Height(header)
+
+	m.viewModel.Update(tea.WindowSizeMsg{
+		Width:  m.width,
+		Height: m.height - headerHeight,
+	})
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case SendEvent:
@@ -72,6 +86,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case error:
 		debug.Write(msg, "Error")
 		m.err = msg
+		m.msg = msg.Error()
+		m.UpdateViewPort()
 		return m, nil
 	case *ssh.Config:
 		m.config = msg
@@ -84,10 +100,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ActiveView:
 		m.view = msg
 		m.viewModel = loadView(msg)
-		m.viewModel.Update(tea.WindowSizeMsg{
-			Width:  m.width,
-			Height: m.height,
-		})
+		m.UpdateViewPort()
+		return m, nil
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
@@ -101,6 +115,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.UpdateViewPort()
+		return m, nil
 	}
 
 	var cmds []tea.Cmd
@@ -108,6 +124,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m *model) Header() string {
+	return headerStyle.Width(m.width - 2).Render(m.msg)
+}
+
 func (m model) View() string {
-	return m.viewModel.View()
+	return lipgloss.JoinVertical(
+		lipgloss.Top,
+		m.Header(),
+		m.viewModel.View(),
+	)
 }

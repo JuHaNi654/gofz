@@ -17,6 +17,9 @@ var customBorder = lipgloss.Border{
 }
 
 var (
+	headerStyle = lipgloss.
+			NewStyle().
+			Border(customBorder)
 	borderStyle = lipgloss.NewStyle().
 			Border(customBorder)
 	focusBorderStyle = lipgloss.NewStyle().
