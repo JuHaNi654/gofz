@@ -13,12 +13,13 @@ const (
 	Wd
 	Get
 	Put
-	Quit
+  Error	
+  Quit
 )
 
 type Event struct {
 	Event   EventType
-	Payload string
+	Payload any
 }
 
 type RecvEvent struct {
@@ -69,9 +70,10 @@ func (c *SftpClient) Put(path string) {
 }
 
 // Download entry
-func (c *SftpClient) Get(path string) {
+func (c *SftpClient) Get(target, dest string) {
 	c.eventChan <- Event{
 		Event: Get,
+    Payload: []string{target, dest}, 
 	}
 }
 

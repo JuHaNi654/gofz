@@ -1,13 +1,22 @@
 package ui
 
 import (
+	"fmt"
+	"gofz/internal/assert"
 	"gofz/internal/debug"
 	"gofz/internal/ssh"
+	"gofz/internal/system"
+	"os"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+)
+
+var (
+  localDirectory *system.DirectoryCache
+  remoteDirectory *system.DirectoryCache
 )
 
 func loadView(view ActiveView) ViewModel {
@@ -46,13 +55,17 @@ func (m *model) connect() tea.Cmd {
 	m.connected = Connected(connected)
 	m.client.Getwd()
 	m.client.List(".")
-	return func() tea.Msg {
+  return func() tea.Msg {
 		return m.connected
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	path, err := os.Getwd()
+	assert.Assert("Working directory is not set", err)
+	localDirectory = system.InitDirectoryCache(path)
+
+  return nil
 }
 
 func NewModel(client *ssh.SftpClient) model {
@@ -84,8 +97,21 @@ func (m model) UpdateViewPort() {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case SendEvent:
-		switch msg.Event {
-		case ssh.List:
+    switch msg.Event {
+		case ssh.Get:
+      entry, _ := msg.Payload.(os.FileInfo) 
+   
+      if (entry.IsDir()) {
+        return m, func() tea.Msg {
+          return fmt.Errorf("Cannot get directory") 
+        }
+      }
+
+      m.client.Get(
+        remoteDirectory.GetEntryPath(entry.Name()),
+        localDirectory.GetEntryPath(entry.Name()),
+      )
+    case ssh.List:
 			path, _ := msg.Payload.(string)
 			m.client.List(path)
 		}

@@ -1,6 +1,7 @@
 package system
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,6 +40,10 @@ func (dc *DirectoryCache) Entries() []os.FileInfo {
 	}
 
 	return list
+}
+
+func (dc *DirectoryCache) GetEntryPath(entry string) string {
+  return fmt.Sprintf("%s/%s", dc.currentWd, entry)
 }
 
 func (dc *DirectoryCache) PreviousWd() {

@@ -15,7 +15,6 @@ type remoteModel struct {
 	height int
 	focus  bool
 	list   list.Model
-	wd     *system.DirectoryCache
 }
 
 func newRemoteModel() *remoteModel {
@@ -43,7 +42,7 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 			return m.list.SetItems(loadItems(items))
 		case ssh.Wd:
 			path, _ := msg.Payload.(string)
-			m.wd = system.InitDirectoryCache(path)
+			remoteDirectory = system.InitDirectoryCache(path)
 			m.list.Title = path
 			return nil
 		}
@@ -52,14 +51,24 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 		m.height = msg.Height
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, keys.Transfer):
+			selected := m.list.SelectedItem()
+			i, _ := selected.(item)
+
+			return func() tea.Msg {
+				return SendEvent{
+					Event:   ssh.Get,
+					Payload: i.Entry,
+				}
+			}
 		case key.Matches(msg, keys.Enter):
 			if 0 == m.list.Index() {
-				m.wd.PreviousWd()
-				m.list.Title = m.wd.GetWd()
+				remoteDirectory.PreviousWd()
+				m.list.Title = remoteDirectory.GetWd()
 				return func() tea.Msg {
 					return SendEvent{
 						Event:   ssh.List,
-						Payload: m.wd.GetWd(),
+						Payload: remoteDirectory.GetWd(),
 					}
 				}
 			}
@@ -68,13 +77,13 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 			i, _ := selected.(item)
 
 			if i.Entry.IsDir() {
-				m.wd.NextWd(i.Entry.Name())
-				m.list.Title = m.wd.GetWd()
+				remoteDirectory.NextWd(i.Entry.Name())
+				m.list.Title = remoteDirectory.GetWd()
 				m.list.Select(0)
 				return func() tea.Msg {
 					return SendEvent{
 						Event:   ssh.List,
-						Payload: m.wd.GetWd(),
+						Payload: remoteDirectory.GetWd(),
 					}
 				}
 			}

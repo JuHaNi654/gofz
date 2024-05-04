@@ -3,6 +3,7 @@ package ssh
 import (
 	"fmt"
 	"gofz/internal/debug"
+	"io"
 	"os"
 
 	"github.com/pkg/sftp"
@@ -58,21 +59,30 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 		switch event.Event {
 		case List:
 			debug.Write("List", "Incoming event type")
-			files, _ := listFiles(*sc, event.Payload)
+		  path, _ := event.Payload.(string)	
+      files, _ := listFiles(sc, path)
 			client.Recv <- RecvEvent{
 				Event:   List,
 				Payload: files,
 			}
 		case Wd:
 			debug.Write("Wd", "Incoming event type")
-			path, _ := getWd(*sc)
+			path, _ := getWd(sc)
 			client.Recv <- RecvEvent{
 				Event:   Wd,
 				Payload: path,
 			}
 		case Get:
 			debug.Write("Get", "Incoming event type")
-		case Put:
+      items, _ := event.Payload.([]string)
+      // TODO maybe make better solution than array of items
+      err := loadFile(sc, items[0], items[1])
+    
+			client.Recv <- RecvEvent{
+				Event: Error,
+				Payload: err,
+			}
+    case Put:
 			debug.Write("Put", "Incoming event type")
 		case Quit:
 			debug.Write("Quit", "Incoming event type")
@@ -85,10 +95,39 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 	}
 }
 
-func getWd(sc sftp.Client) (string, error) {
+func loadFile(sc *sftp.Client, target, dest string) error {
+  remoteFile, err := sc.OpenFile(target, (os.O_RDONLY))
+  if err != nil {
+    debug.Write(err.Error(), "Error opening remote file")
+    return err
+  }
+  
+  defer remoteFile.Close()
+
+  localFile, err := os.Create(dest)
+  if err != nil {
+    debug.Write(err.Error(), "Error creating or opening local file")
+    return err
+  }
+
+  defer localFile.Close()
+
+  bytes, err := io.Copy(localFile, remoteFile)
+
+  if err != nil {
+  debug.Write(err.Error(), "Error while copying bytes")
+    return err
+  }
+
+  debug.Write(fmt.Sprintf("%d", bytes), "Byte copied")
+
+  return nil
+}
+
+func getWd(sc *sftp.Client) (string, error) {
 	return sc.Getwd()
 }
 
-func listFiles(sc sftp.Client, path string) ([]os.FileInfo, error) {
+func listFiles(sc *sftp.Client, path string) ([]os.FileInfo, error) {
 	return sc.ReadDir(path)
 }

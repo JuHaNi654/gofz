@@ -38,7 +38,7 @@ func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case ssh.RecvEvent:
+  case ssh.RecvEvent:
 		debug.Write(msg, "Incoming recv event")
 		return m.remote.Update(msg)
 	case Connected:

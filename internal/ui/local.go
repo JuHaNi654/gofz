@@ -1,10 +1,6 @@
 package ui
 
 import (
-	"gofz/internal/assert"
-	"gofz/internal/system"
-	"os"
-
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,21 +9,14 @@ import (
 type localModel struct {
 	width  int
 	height int
-	list   list.Model
 	focus  bool
-
-	wd *system.DirectoryCache
+	list   list.Model
 }
 
 func newLocalModel() *localModel {
-	path, err := os.Getwd()
-	assert.Assert("Working directory is not set", err)
-	wd := system.InitDirectoryCache(path)
-
 	return &localModel{
 		focus: true,
-		list:  newList(wd.Entries(), wd.GetWd()),
-		wd:    wd,
+		list:  newList(localDirectory.Entries(), localDirectory.GetWd()),
 	}
 }
 
@@ -48,9 +37,9 @@ func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 		switch {
 		case key.Matches(msg, keys.Enter):
 			if 0 == m.list.Index() {
-				m.wd.PreviousWd()
-				m.list.Title = m.wd.GetWd()
-				items := loadItems(m.wd.Entries())
+				localDirectory.PreviousWd()
+				m.list.Title = localDirectory.GetWd()
+				items := loadItems(localDirectory.Entries())
 				return m.list.SetItems(items)
 			}
 
@@ -58,9 +47,9 @@ func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 			i, _ := selected.(item)
 
 			if i.Entry.IsDir() {
-				m.wd.NextWd(i.Entry.Name())
-				items := loadItems(m.wd.Entries())
-				m.list.Title = m.wd.GetWd()
+				localDirectory.NextWd(i.Entry.Name())
+				items := loadItems(localDirectory.Entries())
+				m.list.Title = localDirectory.GetWd()
 				m.list.Select(0)
 				return m.list.SetItems(items)
 			}
