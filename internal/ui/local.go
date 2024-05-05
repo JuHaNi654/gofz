@@ -30,7 +30,17 @@ func (m *localModel) Blur() {
 
 func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
+  case ViewEvent:
+    if msg == ReloadLocal {
+      items := compareItems(
+        localDirectory.Entries(), 
+        m.list.Items(),
+      ) 
+      
+      m.list.Select(0)
+      return m.list.SetItems(items)
+    }
+  case tea.WindowSizeMsg:
 		m.width = msg.Width / 2
 		m.height = msg.Height
 	case tea.KeyMsg:

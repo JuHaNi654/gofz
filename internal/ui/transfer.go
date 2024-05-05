@@ -38,6 +38,12 @@ func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+  case ViewEvent:
+    if (msg == ReloadLocal) {
+      return m.local.Update(msg)
+    } else {
+      return m.remote.Update(msg) 
+    }
   case ssh.RecvEvent:
 		debug.Write(msg, "Incoming recv event")
 		return m.remote.Update(msg)

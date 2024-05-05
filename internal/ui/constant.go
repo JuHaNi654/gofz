@@ -14,11 +14,18 @@ const (
 type Passphrase string
 type ActiveView int
 type Connected bool
+type ViewEvent int
+
 
 const (
 	Menu ActiveView = iota
 	ServerList
 	Transfer
+)
+
+const (
+  ReloadLocal ViewEvent = iota
+  ReloadRemote
 )
 
 type ViewModel interface {

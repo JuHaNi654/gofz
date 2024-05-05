@@ -76,11 +76,18 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 			debug.Write("Get", "Incoming event type")
       items, _ := event.Payload.([]string)
       // TODO maybe make better solution than array of items
-      err := loadFile(sc, items[0], items[1])
-    
+      msg, err := loadFile(sc, items[0], items[1])
+   
+      if err != nil {
+        client.Recv <- RecvEvent{
+          Event: Error,
+          Payload: err,
+        }
+      }
+
 			client.Recv <- RecvEvent{
-				Event: Error,
-				Payload: err,
+				Event: Get,
+				Payload: msg,
 			}
     case Put:
 			debug.Write("Put", "Incoming event type")
@@ -95,11 +102,11 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 	}
 }
 
-func loadFile(sc *sftp.Client, target, dest string) error {
+func loadFile(sc *sftp.Client, target, dest string) (string, error) {
   remoteFile, err := sc.OpenFile(target, (os.O_RDONLY))
   if err != nil {
     debug.Write(err.Error(), "Error opening remote file")
-    return err
+    return "", err
   }
   
   defer remoteFile.Close()
@@ -107,7 +114,7 @@ func loadFile(sc *sftp.Client, target, dest string) error {
   localFile, err := os.Create(dest)
   if err != nil {
     debug.Write(err.Error(), "Error creating or opening local file")
-    return err
+    return "", err
   }
 
   defer localFile.Close()
@@ -116,12 +123,11 @@ func loadFile(sc *sftp.Client, target, dest string) error {
 
   if err != nil {
   debug.Write(err.Error(), "Error while copying bytes")
-    return err
+    return "", err
   }
 
-  debug.Write(fmt.Sprintf("%d", bytes), "Byte copied")
-
-  return nil
+  msg := fmt.Sprintf("Bytes copied: %d", bytes)
+  return msg, nil
 }
 
 func getWd(sc *sftp.Client) (string, error) {

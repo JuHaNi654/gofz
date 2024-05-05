@@ -10,7 +10,7 @@ type EventType int
 
 const (
 	List EventType = iota
-	Wd
+  Wd
 	Get
 	Put
   Error	

@@ -115,6 +115,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			path, _ := msg.Payload.(string)
 			m.client.List(path)
 		}
+    return m, nil
+  case ssh.RecvEvent:
+    if (msg.Event == ssh.Get) {
+      t, _ := msg.Payload.(string) 
+      m.msg = t
+      m.UpdateViewPort()
+      return m, m.viewModel.Update(tea.Msg(ReloadLocal))
+    }
 	case error:
 		debug.Write(msg, "Error")
 		m.err = msg

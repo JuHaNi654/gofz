@@ -31,7 +31,7 @@ func (dc *DirectoryCache) generateParentWd() {
 }
 
 func (dc *DirectoryCache) Entries() []os.FileInfo {
-	entries, _ := os.ReadDir(dc.currentWd)
+  entries, _ := os.ReadDir(dc.currentWd)
 	list := []os.FileInfo{}
 
 	for _, entry := range entries {
