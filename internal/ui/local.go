@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"gofz/internal/ssh"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -45,7 +47,18 @@ func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 		m.height = msg.Height
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keys.Enter):
+    case key.Matches(msg, keys.Transfer):
+      selected := m.list.SelectedItem()
+      i, _ := selected.(item)
+
+      return func() tea.Msg {
+        return SendEvent{
+          Event: ssh.Put,
+          Payload: i.Entry,
+        }
+      }
+
+    case key.Matches(msg, keys.Enter):
 			if 0 == m.list.Index() {
 				localDirectory.PreviousWd()
 				m.list.Title = localDirectory.GetWd()

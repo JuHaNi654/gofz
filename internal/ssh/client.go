@@ -63,9 +63,10 @@ func (c *SftpClient) List(path string) {
 }
 
 // Upload entry
-func (c *SftpClient) Put(path string) {
+func (c *SftpClient) Put(target, dest string) {
 	c.eventChan <- Event{
 		Event: Put,
+    Payload: []string{target, dest},
 	}
 }
 

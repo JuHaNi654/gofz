@@ -76,7 +76,7 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 			debug.Write("Get", "Incoming event type")
       items, _ := event.Payload.([]string)
       // TODO maybe make better solution than array of items
-      msg, err := loadFile(sc, items[0], items[1])
+      msg, err := getFile(sc, items[0], items[1])
    
       if err != nil {
         client.Recv <- RecvEvent{
@@ -91,6 +91,20 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 			}
     case Put:
 			debug.Write("Put", "Incoming event type")
+      items, _ := event.Payload.([]string)
+      msg, err := putFile(sc, items[0], items[1])
+
+      if err != nil {
+        client.Recv <- RecvEvent{
+          Event: Error,
+          Payload: err,
+        }
+      }
+
+			client.Recv <- RecvEvent{
+				Event: Put,
+				Payload: msg,
+			}
 		case Quit:
 			debug.Write("Quit", "Incoming event type")
 			client.Recv <- RecvEvent{
@@ -102,7 +116,30 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 	}
 }
 
-func loadFile(sc *sftp.Client, target, dest string) (string, error) {
+func putFile(sc *sftp.Client, target, dest string) (string, error)  {  
+  localFile, err := os.Open(target)
+  if err != nil {
+    return "", err
+  }
+  defer localFile.Close()
+
+  remoteFile, err := sc.OpenFile(dest, (os.O_WRONLY|os.O_CREATE|os.O_TRUNC))
+  if err != nil {
+    return "", err
+  }
+  defer remoteFile.Close()
+
+  bytes, err := io.Copy(remoteFile, localFile)
+
+  if err != nil {
+    return "", err
+  }
+  
+  msg := fmt.Sprintf("bytes copied: %d", bytes)
+  return msg, nil
+} 
+
+func getFile(sc *sftp.Client, target, dest string) (string, error) {
   remoteFile, err := sc.OpenFile(target, (os.O_RDONLY))
   if err != nil {
     debug.Write(err.Error(), "Error opening remote file")
@@ -122,11 +159,11 @@ func loadFile(sc *sftp.Client, target, dest string) (string, error) {
   bytes, err := io.Copy(localFile, remoteFile)
 
   if err != nil {
-  debug.Write(err.Error(), "Error while copying bytes")
+    debug.Write(err.Error(), "Error while copying bytes")
     return "", err
   }
 
-  msg := fmt.Sprintf("Bytes copied: %d", bytes)
+  msg := fmt.Sprintf("bytes copied: %d", bytes)
   return msg, nil
 }
 

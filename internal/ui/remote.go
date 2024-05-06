@@ -35,7 +35,11 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case ssh.RecvEvent:
+  case ViewEvent:
+    if msg == ReloadRemote {
+      // TODO: update list
+    }
+  case ssh.RecvEvent:
 		switch msg.Event {
 		case ssh.List:
 			items, _ := msg.Payload.([]os.FileInfo)

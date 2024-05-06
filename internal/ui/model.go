@@ -103,7 +103,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
    
       if (entry.IsDir()) {
         return m, func() tea.Msg {
-          return fmt.Errorf("Cannot get directory") 
+          return fmt.Errorf("cannot get directory from remote host") 
         }
       }
 
@@ -111,6 +111,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         remoteDirectory.GetEntryPath(entry.Name()),
         localDirectory.GetEntryPath(entry.Name()),
       )
+
+      return m, nil
+    case ssh.Put:
+      entry, _ := msg.Payload.(os.FileInfo)
+      if (entry.IsDir()) {
+        return m, func() tea.Msg {
+          return fmt.Errorf("cannot put directory to remote host")
+        }
+      }
+
+      m.client.Put(
+        localDirectory.GetEntryPath(entry.Name()),
+        remoteDirectory.GetEntryPath(entry.Name()),
+      )
+      return m, nil
     case ssh.List:
 			path, _ := msg.Payload.(string)
 			m.client.List(path)
@@ -118,10 +133,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     return m, nil
   case ssh.RecvEvent:
     if (msg.Event == ssh.Get) {
-      t, _ := msg.Payload.(string) 
-      m.msg = t
+      val, _ := msg.Payload.(string) 
+      m.msg = val
       m.UpdateViewPort()
       return m, m.viewModel.Update(tea.Msg(ReloadLocal))
+    } else if (msg.Event == ssh.Put) {
+      val, _ := msg.Payload.(string)
+      m.msg = val 
+      m.UpdateViewPort()
+      return m, func() tea.Msg {
+        return SendEvent{
+          Event: ssh.List,
+          Payload: remoteDirectory.GetWd(),
+        }
+      }
     }
 	case error:
 		debug.Write(msg, "Error")
