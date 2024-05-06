@@ -11,10 +11,11 @@ import (
 )
 
 type remoteModel struct {
-	width  int
-	height int
-	focus  bool
-	list   list.Model
+	width      int
+	height     int
+	focus      bool
+	list       list.Model
+  reloadList bool
 }
 
 func newRemoteModel() *remoteModel {
@@ -35,13 +36,28 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-  case ViewEvent:
-    if msg == ReloadRemote {
-      // TODO: update list
-    }
   case ssh.RecvEvent:
 		switch msg.Event {
-		case ssh.List:
+	  case ssh.Put: {
+      m.reloadList = true
+      return func() tea.Msg {
+        return SendEvent{
+          Event:   ssh.List,
+          Payload: remoteDirectory.GetWd(),
+        }
+      }
+    }	
+    case ssh.List:
+      if m.reloadList {
+        m.reloadList = false 
+        entries, _ := msg.Payload.([]os.FileInfo)
+        items := compareItems(
+          entries, 
+          m.list.Items(),
+        )
+
+        return m.list.SetItems(items) 
+      }
 			items, _ := msg.Payload.([]os.FileInfo)
 			return m.list.SetItems(loadItems(items))
 		case ssh.Wd:

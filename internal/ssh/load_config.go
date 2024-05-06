@@ -55,3 +55,17 @@ func parseConfig(lines []string) []*Config {
 
 	return items
 }
+
+func loadPrivateKey(path string) ([]byte, error) {
+	wd, _ := os.UserHomeDir()
+	if strings.HasPrefix(path, "~") {
+		path = strings.Replace(path, "~", wd, 1)
+	}
+
+	key, err := os.ReadFile(path)
+	if err != nil {
+    return nil, err
+	}
+
+	return key, nil
+}

@@ -1,32 +1,5 @@
 package ssh
 
-import (
-	"fmt"
-	"os"
-	"strings"
-)
-
-type EventType int
-
-const (
-	List EventType = iota
-  Wd
-	Get
-	Put
-  Error	
-  Quit
-)
-
-type Event struct {
-	Event   EventType
-	Payload any
-}
-
-type RecvEvent struct {
-	Event   EventType
-	Payload any
-}
-
 type SftpClient struct {
 	passphrase []byte
 	eventChan  chan Event
@@ -83,18 +56,4 @@ func (c *SftpClient) Quit() {
 	c.eventChan <- Event{
 		Event: Quit,
 	}
-}
-
-func loadPrivateKey(path string) []byte {
-	wd, _ := os.UserHomeDir()
-	if strings.HasPrefix(path, "~") {
-		path = strings.Replace(path, "~", wd, 1)
-	}
-
-	key, err := os.ReadFile(path)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	return key
 }

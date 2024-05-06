@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"gofz/internal/assert"
 	"gofz/internal/debug"
 	"io"
 	"os"
@@ -10,12 +11,16 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Connect(client *SftpClient, srvConfig *Config) (bool, error) {
-	key := loadPrivateKey(srvConfig.IdentityFile)
+func Connect(client *SftpClient, srvConfig *Config) (bool, error) {	
 	var err error
 	var signer ssh.Signer
-	signer, err = ssh.ParsePrivateKeyWithPassphrase(key, client.Passphrase())
 
+  key, err := loadPrivateKey(srvConfig.IdentityFile)
+  if err != nil {
+    return false, err
+  }
+
+	signer, err = ssh.ParsePrivateKeyWithPassphrase(key, client.Passphrase())
 	if err != nil {
 		return false, PassphraseError("Invalid passphrase")
 	}
@@ -40,25 +45,17 @@ func Connect(client *SftpClient, srvConfig *Config) (bool, error) {
 }
 
 func handleConnection(conn *ssh.Client, client *SftpClient) {
-	debug.Write("Open", "Connection")
-	defer conn.Close()
-	defer func() {
-		debug.Write("Closed", "Connection")
-	}()
+  defer conn.Close()	
 
-	sc, err := sftp.NewClient(conn)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to start SFTP subsystem: %v\n", err)
-		os.Exit(1)
-	}
+  sc, err := sftp.NewClient(conn)
+  assert.Assert("Unable to start SFTP subsystem", err)
 
-	defer sc.Close()
-	// TODO handle errors
+  defer sc.Close()
+
 	for {
 		event := <-client.eventChan
 		switch event.Event {
 		case List:
-			debug.Write("List", "Incoming event type")
 		  path, _ := event.Payload.(string)	
       files, _ := listFiles(sc, path)
 			client.Recv <- RecvEvent{
@@ -66,14 +63,12 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 				Payload: files,
 			}
 		case Wd:
-			debug.Write("Wd", "Incoming event type")
 			path, _ := getWd(sc)
 			client.Recv <- RecvEvent{
 				Event:   Wd,
 				Payload: path,
 			}
 		case Get:
-			debug.Write("Get", "Incoming event type")
       items, _ := event.Payload.([]string)
       // TODO maybe make better solution than array of items
       msg, err := getFile(sc, items[0], items[1])
@@ -90,7 +85,6 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 				Payload: msg,
 			}
     case Put:
-			debug.Write("Put", "Incoming event type")
       items, _ := event.Payload.([]string)
       msg, err := putFile(sc, items[0], items[1])
 
@@ -106,7 +100,6 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 				Payload: msg,
 			}
 		case Quit:
-			debug.Write("Quit", "Incoming event type")
 			client.Recv <- RecvEvent{
 				Event:   Quit,
 				Payload: true,

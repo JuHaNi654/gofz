@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type input struct {
+type passphrase struct {
 	width     int
 	height    int
 	hidden    bool
@@ -15,30 +15,30 @@ type input struct {
 	textInput textinput.Model
 }
 
-func newInput(hidden bool, placeholder string) *input {
+func newInput(hidden bool, placeholder string) *passphrase {
 	ti := textinput.New()
 	ti.Placeholder = placeholder
 	ti.CharLimit = 255
 	ti.Width = 20
 
-	return &input{
+	return &passphrase{
 		textInput: ti,
 		hidden:    hidden,
 	}
 }
 
-func (m *input) Focus() {
+func (m *passphrase) Focus() {
 	m.textInput.Focus()
 	m.focus = true
 }
 
-func (m *input) Blur() {
+func (m *passphrase) Blur() {
 	m.textInput.Blur()
 	m.textInput.Reset()
 	m.focus = false
 }
 
-func (m *input) Update(msg tea.Msg) tea.Cmd {
+func (m *passphrase) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -61,7 +61,7 @@ func (m *input) Update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-func (m *input) View() string {
+func (m *passphrase) View() string {
 	s := fmt.Sprintf(
 		"Passphrase required:\n%s\n",
 		m.textInput.View(),

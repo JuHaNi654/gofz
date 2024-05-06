@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"gofz/internal/debug"
 	"gofz/internal/ssh"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -15,7 +14,7 @@ type transferModel struct {
 	focus       int
 	passphrase  string
 	inputActive bool
-	input       *input
+	input       *passphrase
 
 	local  *localModel
 	remote *remoteModel
@@ -45,7 +44,6 @@ func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
       return m.remote.Update(msg) 
     }
   case ssh.RecvEvent:
-		debug.Write(msg, "Incoming recv event")
 		return m.remote.Update(msg)
 	case Connected:
 		if msg {

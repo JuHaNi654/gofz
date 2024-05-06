@@ -98,7 +98,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case SendEvent:
     switch msg.Event {
-		case ssh.Get:
+    case ssh.Get:
       entry, _ := msg.Payload.(os.FileInfo) 
    
       if (entry.IsDir()) {
@@ -141,12 +141,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
       val, _ := msg.Payload.(string)
       m.msg = val 
       m.UpdateViewPort()
-      return m, func() tea.Msg {
-        return SendEvent{
-          Event: ssh.List,
-          Payload: remoteDirectory.GetWd(),
-        }
-      }
     }
 	case error:
 		debug.Write(msg, "Error")
