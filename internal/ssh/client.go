@@ -38,16 +38,16 @@ func (c *SftpClient) List(path string) {
 // Upload entry
 func (c *SftpClient) Put(target, dest string) {
 	c.eventChan <- Event{
-		Event: Put,
-    Payload: []string{target, dest},
+		Event:   Put,
+		Payload: []string{target, dest},
 	}
 }
 
 // Download entry
 func (c *SftpClient) Get(target, dest string) {
 	c.eventChan <- Event{
-		Event: Get,
-    Payload: []string{target, dest}, 
+		Event:   Get,
+		Payload: []string{target, dest},
 	}
 }
 
@@ -55,5 +55,12 @@ func (c *SftpClient) Get(target, dest string) {
 func (c *SftpClient) Quit() {
 	c.eventChan <- Event{
 		Event: Quit,
+	}
+}
+
+func (c *SftpClient) handleResponse(t EventType, payload any) {
+	c.Recv <- RecvEvent{
+		Event:   t,
+		Payload: payload,
 	}
 }

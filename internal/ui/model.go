@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"gofz/internal/assert"
-	"gofz/internal/debug"
 	"gofz/internal/ssh"
 	"gofz/internal/system"
 	"os"
@@ -15,8 +14,8 @@ import (
 )
 
 var (
-  localDirectory *system.DirectoryCache
-  remoteDirectory *system.DirectoryCache
+	localDirectory  *system.DirectoryCache
+	remoteDirectory *system.DirectoryCache
 )
 
 func loadView(view ActiveView) ViewModel {
@@ -55,7 +54,7 @@ func (m *model) connect() tea.Cmd {
 	m.connected = Connected(connected)
 	m.client.Getwd()
 	m.client.List(".")
-  return func() tea.Msg {
+	return func() tea.Msg {
 		return m.connected
 	}
 }
@@ -65,7 +64,7 @@ func (m model) Init() tea.Cmd {
 	assert.Assert("Working directory is not set", err)
 	localDirectory = system.InitDirectoryCache(path)
 
-  return nil
+	return nil
 }
 
 func NewModel(client *ssh.SftpClient) model {
@@ -97,53 +96,52 @@ func (m model) UpdateViewPort() {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case SendEvent:
-    switch msg.Event {
-    case ssh.Get:
-      entry, _ := msg.Payload.(os.FileInfo) 
-   
-      if (entry.IsDir()) {
-        return m, func() tea.Msg {
-          return fmt.Errorf("cannot get directory from remote host") 
-        }
-      }
+		switch msg.Event {
+		case ssh.Get:
+			entry, _ := msg.Payload.(os.FileInfo)
 
-      m.client.Get(
-        remoteDirectory.GetEntryPath(entry.Name()),
-        localDirectory.GetEntryPath(entry.Name()),
-      )
+			if entry.IsDir() {
+				return m, func() tea.Msg {
+					return fmt.Errorf("cannot get directory from remote host")
+				}
+			}
 
-      return m, nil
-    case ssh.Put:
-      entry, _ := msg.Payload.(os.FileInfo)
-      if (entry.IsDir()) {
-        return m, func() tea.Msg {
-          return fmt.Errorf("cannot put directory to remote host")
-        }
-      }
+			m.client.Get(
+				remoteDirectory.GetEntryPath(entry.Name()),
+				localDirectory.GetEntryPath(entry.Name()),
+			)
 
-      m.client.Put(
-        localDirectory.GetEntryPath(entry.Name()),
-        remoteDirectory.GetEntryPath(entry.Name()),
-      )
-      return m, nil
-    case ssh.List:
+			return m, nil
+		case ssh.Put:
+			entry, _ := msg.Payload.(os.FileInfo)
+			if entry.IsDir() {
+				return m, func() tea.Msg {
+					return fmt.Errorf("cannot put directory to remote host")
+				}
+			}
+
+			m.client.Put(
+				localDirectory.GetEntryPath(entry.Name()),
+				remoteDirectory.GetEntryPath(entry.Name()),
+			)
+			return m, nil
+		case ssh.List:
 			path, _ := msg.Payload.(string)
 			m.client.List(path)
 		}
-    return m, nil
-  case ssh.RecvEvent:
-    if (msg.Event == ssh.Get) {
-      val, _ := msg.Payload.(string) 
-      m.msg = val
-      m.UpdateViewPort()
-      return m, m.viewModel.Update(tea.Msg(ReloadLocal))
-    } else if (msg.Event == ssh.Put) {
-      val, _ := msg.Payload.(string)
-      m.msg = val 
-      m.UpdateViewPort()
-    }
+		return m, nil
+	case ssh.RecvEvent:
+		if msg.Event == ssh.Get {
+			val, _ := msg.Payload.(string)
+			m.msg = val
+			m.UpdateViewPort()
+			return m, m.viewModel.Update(tea.Msg(ReloadLocal))
+		} else if msg.Event == ssh.Put {
+			val, _ := msg.Payload.(string)
+			m.msg = val
+			m.UpdateViewPort()
+		}
 	case error:
-		debug.Write(msg, "Error")
 		m.err = msg
 		m.msg = msg.Error()
 		m.UpdateViewPort()
