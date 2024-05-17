@@ -11,7 +11,8 @@ func HandleIncomingData(recv <-chan ssh.RecvEvent, fn func(msg tea.Msg)) {
 		event := <-recv
 		switch event.Event {
 		case ssh.Quit:
-			return
+		  fn(tea.Msg(Connected(false)))	
+      return
 		default:
 			fn(tea.Msg(event))
 		}

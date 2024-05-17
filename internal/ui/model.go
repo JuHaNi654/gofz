@@ -24,7 +24,9 @@ func loadView(view ActiveView) ViewModel {
 		return newTransferModel()
 	case ServerList:
 		return newServerList()
-	default:
+  case PassphraseInput:
+    return newPassphraseInput()
+  default:
 		return newMenuModel()
 	}
 }
@@ -40,6 +42,7 @@ type model struct {
 	client    *ssh.SftpClient
 	help      help.Model
 	err       error
+  ready     bool
 }
 
 func (m *model) connect() tea.Cmd {
@@ -54,9 +57,8 @@ func (m *model) connect() tea.Cmd {
 	m.connected = Connected(connected)
 	m.client.Getwd()
 	m.client.List(".")
-	return func() tea.Msg {
-		return m.connected
-	}
+
+  return nil
 }
 
 func (m model) Init() tea.Cmd {
@@ -70,9 +72,10 @@ func (m model) Init() tea.Cmd {
 func NewModel(client *ssh.SftpClient) model {
 	return model{
 		view:      Menu,
-		viewModel: loadView(Menu),
 		client:    client,
+    viewModel: loadView(Menu),
 		help:      help.New(),
+    ready:     true,
 	}
 }
 
@@ -94,8 +97,8 @@ func (m model) UpdateViewPort() {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case SendEvent:
+  switch msg := msg.(type) {
+  case SendEvent:
 		switch msg.Event {
 		case ssh.Get:
 			entry, _ := msg.Payload.(os.FileInfo)
@@ -131,34 +134,57 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case ssh.RecvEvent:
-		if msg.Event == ssh.Get {
+	  switch msg.Event {
+    case ssh.Get:
 			val, _ := msg.Payload.(string)
 			m.msg = val
 			m.UpdateViewPort()
+
 			return m, m.viewModel.Update(tea.Msg(ReloadLocal))
-		} else if msg.Event == ssh.Put {
+    case ssh.Put: 
 			val, _ := msg.Payload.(string)
 			m.msg = val
 			m.UpdateViewPort()
-		}
-	case error:
-		m.err = msg
+    case ssh.Connected:
+      // TODO update ready state
+    }	
+	case error: 
+    m.err = msg
 		m.msg = msg.Error()
 		m.UpdateViewPort()
+
+    if _, ok := msg.(ssh.PassphraseError); ok { 
+      return m, func() tea.Msg {
+        return ServerList
+      }
+    }
+
 		return m, nil
 	case *ssh.Config:
-		m.config = msg
+		m.config = msg  
+    if msg.Protected {
+      return m, func() tea.Msg {
+        return PassphraseInput
+      }
+    }
+
 		return m, func() tea.Msg {
 			return Transfer
 		}
 	case Passphrase:
-		m.client.SetPassphrase(string(msg))
-		return m, m.connect()
-	case ActiveView:
+		m.config.Passphrase = string(msg)
+		return m, func() tea.Msg {
+			return Transfer
+		}
+  case ActiveView:
 		m.view = msg
 		m.viewModel = loadView(msg)
-		m.msg = ""
 		m.UpdateViewPort()
+
+    if msg == Transfer {
+      return m, m.connect()
+    }
+    
 		return m, nil
 	case tea.KeyMsg:
 		switch {
@@ -186,6 +212,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// TODO make visibility timer on the messages
 func (m *model) header() string {
 	return headerStyle.Width(m.width - 2).Render(m.msg)
 }
@@ -195,6 +222,15 @@ func (m *model) footer() string {
 }
 
 func (m model) View() string {
+  if !m.ready { // TODO make loading view work
+    return lipgloss.JoinVertical(
+      lipgloss.Top,
+      m.header(),
+      "Loading ...",
+      m.footer(),
+    )
+  }
+  
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
 		m.header(),

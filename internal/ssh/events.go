@@ -9,6 +9,7 @@ const (
 	Put
   Error	
   Quit
+  Connected
 )
 
 type Event struct {

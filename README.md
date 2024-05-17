@@ -1,8 +1,11 @@
 # gofz
 Client TUI wrapper for sftp connection
 
-## Info
-Go version 1.20.6
+## Requirements
+- Go version 1.20.6
+- Currently `ssh-keygen` cmd is required to check if given private key
+  file is passphrase protected
+
 
 ## Packages used
 - https://github.com/pkg/sftp

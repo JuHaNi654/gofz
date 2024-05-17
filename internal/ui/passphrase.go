@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -10,32 +11,21 @@ import (
 type passphrase struct {
 	width     int
 	height    int
-	hidden    bool
 	focus     bool
 	textInput textinput.Model
+  value     string
 }
 
-func newInput(hidden bool, placeholder string) *passphrase {
+func newPassphraseInput() *passphrase {
 	ti := textinput.New()
-	ti.Placeholder = placeholder
+	ti.Placeholder = "Passphrase ..."
 	ti.CharLimit = 255
 	ti.Width = 20
+  ti.Focus()
 
 	return &passphrase{
 		textInput: ti,
-		hidden:    hidden,
 	}
-}
-
-func (m *passphrase) Focus() {
-	m.textInput.Focus()
-	m.focus = true
-}
-
-func (m *passphrase) Blur() {
-	m.textInput.Blur()
-	m.textInput.Reset()
-	m.focus = false
 }
 
 func (m *passphrase) Update(msg tea.Msg) tea.Cmd {
@@ -43,19 +33,33 @@ func (m *passphrase) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
-		m.width = msg.Width / 2
+		m.width = msg.Width
 	case tea.KeyMsg:
-		if m.hidden && msg.Type == tea.KeyRunes {
-			star := tea.Key{
-				Type:  tea.KeyRunes,
-				Runes: []rune{rune('*')},
-				Alt:   false,
-			}
+    switch {
+    case key.Matches(msg, keys.Enter):
+      return func() tea.Msg {
+        return Passphrase(m.value)
+      }
+    case key.Matches(msg, keys.Back):
+      if len(m.value) > 0 {
+        m.value = m.value[:len(m.value)-1] 
+      }
+      
+      m.textInput, cmd = m.textInput.Update(msg)
+    default: 
+      if msg.Type == tea.KeyRunes {
+        star := tea.Key{
+          Type:  tea.KeyRunes,
+          Runes: []rune{rune('*')},
+          Alt:   false,
+        }
 
-			m.textInput, cmd = m.textInput.Update(tea.KeyMsg(star))
-		} else {
-			m.textInput, cmd = m.textInput.Update(msg)
-		}
+        m.value += msg.String()
+        m.textInput, cmd = m.textInput.Update(tea.KeyMsg(star))
+      } else {
+        m.textInput, cmd = m.textInput.Update(msg)
+      }
+    }
 	}
 
 	return cmd

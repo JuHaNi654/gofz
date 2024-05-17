@@ -1,7 +1,11 @@
 package ssh
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -10,19 +14,26 @@ type Config struct {
 	Hostname     string
 	Port         uint16
 	IdentityFile string
+
+  Passphrase string
+  Protected bool
+}
+func (c *Config) PassphraseAsBytes() []byte {
+  return []byte(c.Passphrase)
 }
 
-// TODO some kind of validation?
 func newConfig(data map[string]string) *Config {
 	port, _ := toPort(data["Port"])
+  protected, _ := isKeyProtected(data["IdentityFile"])
 
-	return &Config{
+  return &Config{
 		Host:         data["Host"],
 		User:         data["User"],
 		Hostname:     data["Hostname"],
 		Port:         port,
 		IdentityFile: data["IdentityFile"],
-	}
+    Protected:    protected,	
+  }
 }
 
 func toPort(port string) (uint16, error) {
@@ -32,4 +43,24 @@ func toPort(port string) (uint16, error) {
 	}
 
 	return uint16(value), nil
+}
+
+func isKeyProtected(keyFile string) (bool, error) {
+  path, _ := os.UserHomeDir()
+	
+  if strings.HasPrefix(keyFile, "~") {
+		keyFile = strings.Replace(keyFile, "~", path, 1)
+	} else {
+    keyFile = fmt.Sprintf("%s/%s", path, keyFile)
+  }
+ 
+  cmd := exec.Command("ssh-keygen", "-f", keyFile, "-y")
+  _, err := cmd.CombinedOutput()
+ 
+
+  if err != nil {
+    return true, nil
+  }
+
+  return false, nil
 }

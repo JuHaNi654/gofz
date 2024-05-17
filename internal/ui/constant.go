@@ -20,7 +20,8 @@ type ViewEvent int
 const (
 	Menu ActiveView = iota
 	ServerList
-	Transfer
+  PassphraseInput	
+  Transfer
 )
 
 const (
