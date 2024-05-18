@@ -11,9 +11,8 @@ import (
 type passphrase struct {
 	width     int
 	height    int
-	focus     bool
-	textInput textinput.Model
   value     string
+	textInput textinput.Model
 }
 
 func newPassphraseInput() *passphrase {
@@ -70,13 +69,6 @@ func (m *passphrase) View() string {
 		"Passphrase required:\n%s\n",
 		m.textInput.View(),
 	)
-
-	if m.focus {
-		return centerContentFocus.
-			Width(m.width - 2).
-			Height(m.height - 2).
-			Render(s)
-	}
 
 	return centerContent.
 		Width(m.width - 2).

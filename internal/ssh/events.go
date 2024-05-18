@@ -4,12 +4,12 @@ type EventType int
 
 const (
 	List EventType = iota
-  Wd
+	Wd
 	Get
 	Put
-  Error	
-  Quit
-  Connected
+	Error
+	Quit
+	Connected
 )
 
 type Event struct {

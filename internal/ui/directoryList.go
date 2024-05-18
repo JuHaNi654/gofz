@@ -11,9 +11,9 @@ import (
 )
 
 type item struct {
+  Entry  os.FileInfo
 	Label  string
-	Entry  os.FileInfo
-	notify bool
+  notify bool	
 }
 
 func (i item) FilterValue() string { return "" }

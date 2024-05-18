@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func handleConnection(conn *ssh.Client, client *SftpClient) {
+func handleConnection(conn *ssh.Client, channel *SftpChannel) {
 	defer conn.Close()
 
 	sc, err := sftp.NewClient(conn)
@@ -19,47 +19,29 @@ func handleConnection(conn *ssh.Client, client *SftpClient) {
 	defer sc.Close()
 
 	for {
-		event := <-client.eventChan
-		switch event.Event {
+		event, open := <-channel.Sender
+	
+    if !open  {
+      return
+    }
+
+    switch event.Event {
 		case List:
 			path, _ := event.Payload.(string)
 			files, err := sc.ReadDir(path)
-
-			if err != nil {
-				client.handleResponse(Error, err)
-			}
-
-			client.handleResponse(List, files)
+      channel.handleResponse(List, files, err)
 		case Wd:
 			path, err := sc.Getwd()
-
-			if err != nil {
-				client.handleResponse(Error, err)
-			}
-
-			client.handleResponse(Wd, path)
+      channel.handleResponse(Wd, path, err)
 		case Get:
 			items, _ := event.Payload.([]string)
 			// TODO maybe make better solution than array of items
 			msg, err := getFile(sc, items[0], items[1])
-
-			if err != nil {
-				client.handleResponse(Error, err)
-			}
-
-			client.handleResponse(Get, msg)
+      channel.handleResponse(Get, msg, err)
 		case Put:
 			items, _ := event.Payload.([]string)
 			msg, err := putFile(sc, items[0], items[1])
-
-			if err != nil {
-				client.handleResponse(Error, err)
-			}
-
-			client.handleResponse(Put, msg)
-		case Quit:
-			client.handleResponse(Quit, true)
-			return
+      channel.handleResponse(Put, msg, err)
 		}
 	}
 }

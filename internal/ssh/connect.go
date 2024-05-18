@@ -9,7 +9,7 @@ import (
 	kh "golang.org/x/crypto/ssh/knownhosts"
 )
 
-func Connect(client *SftpClient, srvConfig *Config) (bool, error) {
+func Connect(client *SftpChannel, srvConfig *Config) (bool, error) {
 	var err error
 	var signer ssh.Signer
 
@@ -18,17 +18,17 @@ func Connect(client *SftpClient, srvConfig *Config) (bool, error) {
 		return false, err
 	}
 
-  if srvConfig.Protected {
-    signer, err = ssh.ParsePrivateKeyWithPassphrase(key, srvConfig.PassphraseAsBytes())
-  } else {
-    signer, err = ssh.ParsePrivateKey(key)
-  }
+	if srvConfig.Protected {
+		signer, err = ssh.ParsePrivateKeyWithPassphrase(key, srvConfig.PassphraseAsBytes())
+	} else {
+		signer, err = ssh.ParsePrivateKey(key)
+	}
 
-  if err != nil {
-    return false, PassphraseError("Invalid passphrase")
-  }
+	if err != nil {
+		return false, PassphraseError("Invalid passphrase")
+	}
 
-  hostKeyCallback, err := kh.New(filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts"))
+	hostKeyCallback, err := kh.New(filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts"))
 	if err != nil {
 		return false, err
 	}
@@ -51,4 +51,3 @@ func Connect(client *SftpClient, srvConfig *Config) (bool, error) {
 	go handleConnection(conn, client)
 	return true, nil
 }
-

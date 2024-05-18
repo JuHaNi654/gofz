@@ -10,10 +10,10 @@ import (
 )
 
 func main() {
-	client := ssh.NewSftpClient()
-	p := tea.NewProgram(ui.NewModel(client), tea.WithAltScreen())
+	channel := ssh.NewSftpChannel()
+	p := tea.NewProgram(ui.NewModel(channel), tea.WithAltScreen())
 
-	go ui.HandleIncomingData(client.Recv, p.Send)
+	go ui.HandleIncomingData(channel.Recv, p.Send)
 
 	if err := p.Start(); err != nil {
 		fmt.Println("Error while running program:", err)

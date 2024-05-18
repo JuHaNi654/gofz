@@ -64,7 +64,7 @@ func loadPrivateKey(path string) ([]byte, error) {
 
 	key, err := os.ReadFile(path)
 	if err != nil {
-    return nil, err
+		return nil, err
 	}
 
 	return key, nil

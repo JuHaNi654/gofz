@@ -8,13 +8,13 @@ import (
 
 func HandleIncomingData(recv <-chan ssh.RecvEvent, fn func(msg tea.Msg)) {
 	for {
-		event := <-recv
-		switch event.Event {
-		case ssh.Quit:
+		event, open := <-recv
+
+    if open {
+			fn(tea.Msg(event))
+    } else {
 		  fn(tea.Msg(Connected(false)))	
       return
-		default:
-			fn(tea.Msg(event))
-		}
+    }
 	}
 }

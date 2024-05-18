@@ -24,9 +24,9 @@ func loadView(view ActiveView) ViewModel {
 		return newTransferModel()
 	case ServerList:
 		return newServerList()
-  case PassphraseInput:
-    return newPassphraseInput()
-  default:
+	case PassphraseInput:
+		return newPassphraseInput()
+	default:
 		return newMenuModel()
 	}
 }
@@ -34,19 +34,20 @@ func loadView(view ActiveView) ViewModel {
 type model struct {
 	width     int
 	height    int
+	msg       string
+	ready     bool
+	err       error
 	view      ActiveView
 	viewModel ViewModel
 	config    *ssh.Config
-	msg       string
 	connected Connected
-	client    *ssh.SftpClient
+	channel   *ssh.SftpChannel
 	help      help.Model
-	err       error
-  ready     bool
 }
 
 func (m *model) connect() tea.Cmd {
-	connected, err := ssh.Connect(m.client, m.config)
+	m.channel.OpenSender()
+	connected, err := ssh.Connect(m.channel, m.config)
 
 	if err != nil {
 		return func() tea.Msg {
@@ -55,10 +56,10 @@ func (m *model) connect() tea.Cmd {
 	}
 
 	m.connected = Connected(connected)
-	m.client.Getwd()
-	m.client.List(".")
+	m.channel.Getwd()
+	m.channel.List(".")
 
-  return nil
+	return nil
 }
 
 func (m model) Init() tea.Cmd {
@@ -69,13 +70,13 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
-func NewModel(client *ssh.SftpClient) model {
+func NewModel(channel *ssh.SftpChannel) model {
 	return model{
 		view:      Menu,
-		client:    client,
-    viewModel: loadView(Menu),
+		channel:   channel,
+		viewModel: loadView(Menu),
 		help:      help.New(),
-    ready:     true,
+		ready:     true,
 	}
 }
 
@@ -97,8 +98,8 @@ func (m model) UpdateViewPort() {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-  switch msg := msg.(type) {
-  case SendEvent:
+	switch msg := msg.(type) {
+	case SendEvent:
 		switch msg.Event {
 		case ssh.Get:
 			entry, _ := msg.Payload.(os.FileInfo)
@@ -109,7 +110,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			m.client.Get(
+			m.channel.Get(
 				remoteDirectory.GetEntryPath(entry.Name()),
 				localDirectory.GetEntryPath(entry.Name()),
 			)
@@ -123,50 +124,50 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			m.client.Put(
+			m.channel.Put(
 				localDirectory.GetEntryPath(entry.Name()),
 				remoteDirectory.GetEntryPath(entry.Name()),
 			)
 			return m, nil
 		case ssh.List:
 			path, _ := msg.Payload.(string)
-			m.client.List(path)
+			m.channel.List(path)
 		}
 		return m, nil
 	case ssh.RecvEvent:
-	  switch msg.Event {
-    case ssh.Get:
+		switch msg.Event {
+		case ssh.Get:
 			val, _ := msg.Payload.(string)
 			m.msg = val
 			m.UpdateViewPort()
 
 			return m, m.viewModel.Update(tea.Msg(ReloadLocal))
-    case ssh.Put: 
+		case ssh.Put:
 			val, _ := msg.Payload.(string)
 			m.msg = val
 			m.UpdateViewPort()
-    case ssh.Connected:
-      // TODO update ready state
-    }	
-	case error: 
-    m.err = msg
+		case ssh.Connected:
+			// TODO update ready state
+		}
+	case error:
+		m.err = msg
 		m.msg = msg.Error()
 		m.UpdateViewPort()
 
-    if _, ok := msg.(ssh.PassphraseError); ok { 
-      return m, func() tea.Msg {
-        return ServerList
-      }
-    }
+		if _, ok := msg.(ssh.PassphraseError); ok {
+			return m, func() tea.Msg {
+				return ServerList
+			}
+		}
 
 		return m, nil
 	case *ssh.Config:
-		m.config = msg  
-    if msg.Protected {
-      return m, func() tea.Msg {
-        return PassphraseInput
-      }
-    }
+		m.config = msg
+		if msg.Protected {
+			return m, func() tea.Msg {
+				return PassphraseInput
+			}
+		}
 
 		return m, func() tea.Msg {
 			return Transfer
@@ -176,22 +177,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, func() tea.Msg {
 			return Transfer
 		}
-  case ActiveView:
+	case ActiveView:
 		m.view = msg
 		m.viewModel = loadView(msg)
 		m.UpdateViewPort()
 
-    if msg == Transfer {
-      return m, m.connect()
-    }
-    
+		if msg == Transfer {
+			return m, m.connect()
+		}
+
 		return m, nil
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
 			if m.view == Transfer && m.connected {
 				m.connected = false
-				m.client.Quit()
+				m.channel.Quit()
 			}
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
@@ -222,15 +223,15 @@ func (m *model) footer() string {
 }
 
 func (m model) View() string {
-  if !m.ready { // TODO make loading view work
-    return lipgloss.JoinVertical(
-      lipgloss.Top,
-      m.header(),
-      "Loading ...",
-      m.footer(),
-    )
-  }
-  
+	if !m.ready { // TODO make loading view work
+		return lipgloss.JoinVertical(
+			lipgloss.Top,
+			m.header(),
+			"Loading ...",
+			m.footer(),
+		)
+	}
+
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
 		m.header(),

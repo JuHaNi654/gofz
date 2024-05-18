@@ -14,8 +14,8 @@ type remoteModel struct {
 	width      int
 	height     int
 	focus      bool
+  checkDiff  bool
 	list       list.Model
-  reloadList bool
 }
 
 func newRemoteModel() *remoteModel {
@@ -39,7 +39,7 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
   case ssh.RecvEvent:
 		switch msg.Event {
 	  case ssh.Put: {
-      m.reloadList = true
+      m.checkDiff = true
       return func() tea.Msg {
         return SendEvent{
           Event:   ssh.List,
@@ -48,8 +48,8 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
       }
     }	
     case ssh.List:
-      if m.reloadList {
-        m.reloadList = false 
+      if m.checkDiff {
+        m.checkDiff = false 
         entries, _ := msg.Payload.([]os.FileInfo)
         items := compareItems(
           entries, 
