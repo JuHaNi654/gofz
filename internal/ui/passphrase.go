@@ -9,8 +9,6 @@ import (
 )
 
 type passphrase struct {
-	width     int
-	height    int
   value     string
 	textInput textinput.Model
 }
@@ -30,9 +28,6 @@ func newPassphraseInput() *passphrase {
 func (m *passphrase) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.height = msg.Height
-		m.width = msg.Width
 	case tea.KeyMsg:
     switch {
     case key.Matches(msg, keys.Enter):
@@ -71,7 +66,7 @@ func (m *passphrase) View() string {
 	)
 
 	return centerContent.
-		Width(m.width - 2).
-		Height(m.height - 2).
+		Width(screen.Width() - borderSpacing).
+		Height(screen.Height() - borderSpacing).
 		Render(s)
 }

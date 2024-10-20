@@ -9,10 +9,8 @@ import (
 )
 
 type localModel struct {
-	width  int
-	height int
-	focus  bool
-	list   list.Model
+	focus bool
+	list  list.Model
 }
 
 func newLocalModel() *localModel {
@@ -32,33 +30,30 @@ func (m *localModel) Blur() {
 
 func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-  case ViewEvent:
-    if msg == ReloadLocal {
-      items := compareItems(
-        localDirectory.Entries(), 
-        m.list.Items(),
-      ) 
-      
-      m.list.Select(0)
-      return m.list.SetItems(items)
-    }
-  case tea.WindowSizeMsg:
-		m.width = msg.Width / 2
-		m.height = msg.Height
+	case ViewEvent:
+		if msg == ReloadLocal {
+			items := compareItems(
+				localDirectory.Entries(),
+				m.list.Items(),
+			)
+
+			m.list.Select(0)
+			return m.list.SetItems(items)
+		}
 	case tea.KeyMsg:
 		switch {
-    case key.Matches(msg, keys.Transfer):
-      selected := m.list.SelectedItem()
-      i, _ := selected.(item)
+		case key.Matches(msg, keys.Transfer):
+			selected := m.list.SelectedItem()
+			i, _ := selected.(item)
 
-      return func() tea.Msg {
-        return SendEvent{
-          Event: ssh.Put,
-          Payload: i.Entry,
-        }
-      }
+			return func() tea.Msg {
+				return SendEvent{
+					Event:   ssh.Put,
+					Payload: i.Entry,
+				}
+			}
 
-    case key.Matches(msg, keys.Enter):
+		case key.Matches(msg, keys.Enter):
 			if 0 == m.list.Index() {
 				localDirectory.PreviousWd()
 				m.list.Title = localDirectory.GetWd()
@@ -86,15 +81,18 @@ func (m *localModel) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *localModel) View() string {
+	w := (screen.Width() / 2) - borderSpacing
+	h := screen.Height() - borderSpacing
+
 	if m.focus {
 		return focusBorderStyle.
-			Width(m.width - 2).
-			Height(m.height - 2).
+			Width(w).
+			Height(h).
 			Render(m.list.View())
 	}
 
 	return borderStyle.
-		Width(m.width - 2).
-		Height(m.height - 2).
+		Width(w).
+		Height(h).
 		Render(m.list.View())
 }

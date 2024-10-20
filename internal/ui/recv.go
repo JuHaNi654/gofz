@@ -6,7 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func HandleIncomingData(recv <-chan ssh.RecvEvent, fn func(msg tea.Msg)) {
+func StartRecv(recv <-chan ssh.RecvEvent, fn func(msg tea.Msg)) {
 	for {
 		event, open := <-recv
 

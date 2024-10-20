@@ -67,8 +67,6 @@ func NewServerList(servers []*ssh.Config) list.Model {
 }
 
 type serverList struct {
-	width   int
-	height  int
 	servers []*ssh.Config
 	list    list.Model
 }
@@ -90,9 +88,6 @@ func (m *serverList) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
@@ -113,7 +108,7 @@ func (m *serverList) Update(msg tea.Msg) tea.Cmd {
 
 func (m *serverList) View() string {
 	return centerContent.
-		Width(m.width - 2).
-		Height(m.height - 2).
+		Width(screen.Width() - borderSpacing).
+		Height(screen.Height() - borderSpacing).
 		Render(m.list.View())
 }

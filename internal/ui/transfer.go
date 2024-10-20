@@ -9,18 +9,15 @@ import (
 )
 
 type transferModel struct {
-	width       int
-	height      int
-	focus       int
-
+	focus  int
 	local  *localModel
 	remote *remoteModel
 }
 
 func newTransferModel() *transferModel {
-  return &transferModel{
-		local:       newLocalModel(),
-		remote:      newRemoteModel(),
+	return &transferModel{
+		local:  newLocalModel(),
+		remote: newRemoteModel(),
 	}
 }
 
@@ -28,26 +25,20 @@ func (m *transferModel) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-  case ViewEvent:
-    if (msg == ReloadLocal) {
-      return m.local.Update(msg)
-    } else {
-      return m.remote.Update(msg) 
-    }
-  case ssh.RecvEvent:
+	case ViewEvent:
+		if msg == ReloadLocal {
+			return m.local.Update(msg)
+		} else {
+			return m.remote.Update(msg)
+		}
+	case ssh.RecvEvent:
 		return m.remote.Update(msg)
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-
-		m.local.Update(msg)
-		m.remote.Update(msg)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
-      return func() tea.Msg {
-        return Menu
-      }
+			return func() tea.Msg {
+				return Menu
+			}
 		case key.Matches(msg, keys.Next), key.Matches(msg, keys.Prev):
 			if m.focus == focusLeft {
 				m.focus = focusRight

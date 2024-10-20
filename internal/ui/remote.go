@@ -11,11 +11,9 @@ import (
 )
 
 type remoteModel struct {
-	width      int
-	height     int
-	focus      bool
-  checkDiff  bool
-	list       list.Model
+	focus     bool
+	checkDiff bool
+	list      list.Model
 }
 
 func newRemoteModel() *remoteModel {
@@ -36,28 +34,29 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-  case ssh.RecvEvent:
+	case ssh.RecvEvent:
 		switch msg.Event {
-	  case ssh.Put: {
-      m.checkDiff = true
-      return func() tea.Msg {
-        return SendEvent{
-          Event:   ssh.List,
-          Payload: remoteDirectory.GetWd(),
-        }
-      }
-    }	
-    case ssh.List:
-      if m.checkDiff {
-        m.checkDiff = false 
-        entries, _ := msg.Payload.([]os.FileInfo)
-        items := compareItems(
-          entries, 
-          m.list.Items(),
-        )
+		case ssh.Put:
+			{
+				m.checkDiff = true
+				return func() tea.Msg {
+					return SendEvent{
+						Event:   ssh.List,
+						Payload: remoteDirectory.GetWd(),
+					}
+				}
+			}
+		case ssh.List:
+			if m.checkDiff {
+				m.checkDiff = false
+				entries, _ := msg.Payload.([]os.FileInfo)
+				items := compareItems(
+					entries,
+					m.list.Items(),
+				)
 
-        return m.list.SetItems(items) 
-      }
+				return m.list.SetItems(items)
+			}
 			items, _ := msg.Payload.([]os.FileInfo)
 			return m.list.SetItems(loadItems(items))
 		case ssh.Wd:
@@ -66,9 +65,6 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 			m.list.Title = path
 			return nil
 		}
-	case tea.WindowSizeMsg:
-		m.width = msg.Width / 2
-		m.height = msg.Height
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Transfer):
@@ -117,15 +113,18 @@ func (m *remoteModel) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *remoteModel) View() string {
+	w := (screen.Width() / 2) - borderSpacing
+	h := screen.Height() - borderSpacing
+
 	if m.focus {
 		return focusBorderStyle.
-			Width(m.width - 2).
-			Height(m.height - 2).
+			Width(w).
+			Height(h).
 			Render(m.list.View())
 	}
 
 	return borderStyle.
-		Width(m.width - 2).
-		Height(m.height - 2).
+		Width(w).
+		Height(h).
 		Render(m.list.View())
 }

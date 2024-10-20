@@ -11,9 +11,9 @@ import (
 )
 
 type item struct {
-  Entry  os.FileInfo
+	Entry  os.FileInfo
 	Label  string
-  notify bool	
+	notify bool
 }
 
 func (i item) FilterValue() string { return "" }
@@ -65,7 +65,6 @@ func (d itemDelegate) Render(
 func loadItems(entries []os.FileInfo) []list.Item {
 	items := []list.Item{}
 
-	// TODO: think another way insert this, so that there is no entry with nil value
 	items = append(items, item{Label: ".."})
 	for _, entry := range entries {
 		items = append(items, item{Label: entry.Name(), Entry: entry})

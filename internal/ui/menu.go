@@ -12,8 +12,6 @@ var choices = []string{
 }
 
 type menuModel struct {
-	width  int
-	height int
 	cursor int
 }
 
@@ -24,9 +22,6 @@ func newMenuModel() *menuModel {
 func (m *menuModel) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Up):
@@ -65,7 +60,7 @@ func (m *menuModel) View() string {
 	}
 
 	return centerContent.
-		Width(m.width - 2).
-		Height(m.height - 2).
+		Width(screen.Width() - borderSpacing).
+		Height(screen.Height() - borderSpacing).
 		Render(s.String())
 }

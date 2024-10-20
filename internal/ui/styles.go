@@ -16,6 +16,8 @@ var customBorder = lipgloss.Border{
 	BottomRight: "\u255d",
 }
 
+var borderSpacing = 2
+
 var (
 	headerStyle = lipgloss.
 			NewStyle().
